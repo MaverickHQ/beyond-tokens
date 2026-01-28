@@ -60,6 +60,8 @@ def handler(event, context):
 
     fixture = _load_fixture()
 
+    planner_payload = payload.get("planner", {}) if isinstance(payload, dict) else {}
+
     if "scenario" in payload:
         scenario_path = (
             Path(__file__).resolve().parents[1]
@@ -132,6 +134,8 @@ def handler(event, context):
         policy_id=policy.get("policy_id"),
         policy_version=policy.get("policy_version"),
         policy_hash=policy.get("policy_hash"),
+        planner_name=planner_payload.get("planner_name"),
+        planner_metadata=planner_payload.get("planner_metadata"),
     )
     run_store.save_run(result)
     artifacts = artifact_writer.write(result)

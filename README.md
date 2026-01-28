@@ -16,6 +16,8 @@ A minimal world-model pipeline that shares the same core semantics locally and i
 
 Artifacts now include `decision.json`, `trajectory.json`, and `deltas.json` for each run.
 
+The planner is provider-neutral and untrusted: it only proposes a plan, while simulation and verification remain authoritative.
+
 ## Sequence (Plan → Simulate → Verify → Execute)
 ```mermaid
 sequenceDiagram
@@ -53,6 +55,8 @@ sequenceDiagram
 
 AWS mapping: State/Run/Policy stores map to DynamoDB tables. Artifacts live in an S3 prefix, and entry points are Lambda handlers (simulate/execute/status).
 
+Planner insertion (proposes, never executes): Planner → simulate_plan → verify → artifacts → execute_run.
+
 ## Setup
 
 ```bash
@@ -75,6 +79,12 @@ make test
 
 ```bash
 make demo-local
+```
+
+## Local Demo (Planner)
+
+```bash
+make demo-local-planner
 ```
 
 ## AWS Demo

@@ -11,7 +11,13 @@ def test_explain_transition_accepts_includes_deltas():
 
     verification = verify_transition(state, action)
     transition = apply_action(state, action)
-    explanation = explain_transition(state, action, transition.next_state, verification, transition.prices)
+    explanation = explain_transition(
+        state,
+        action,
+        transition.next_state,
+        verification,
+        transition.prices,
+    )
 
     assert explanation.startswith("Accepted:")
     assert "cash" in explanation

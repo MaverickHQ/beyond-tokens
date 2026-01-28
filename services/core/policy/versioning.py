@@ -11,7 +11,10 @@ def compute_policy_hash(policy: Dict[str, object]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def ensure_policy_metadata(policy: Dict[str, object], default_version: str = "v1") -> Dict[str, object]:
+def ensure_policy_metadata(
+    policy: Dict[str, object],
+    default_version: str = "v1",
+) -> Dict[str, object]:
     normalized = dict(policy)
     normalized.setdefault("policy_version", default_version)
     if "policy_hash" not in normalized:

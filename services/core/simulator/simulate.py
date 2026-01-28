@@ -32,6 +32,8 @@ class SimulationResult:
     policy_id: Optional[str] = None
     policy_version: Optional[str] = None
     policy_hash: Optional[str] = None
+    planner_name: Optional[str] = None
+    planner_metadata: Optional[Dict[str, object]] = None
 
 
 def _apply_market_price(action: Action, price_context: dict) -> Action:
@@ -50,6 +52,8 @@ def simulate_plan(
     policy_id: Optional[str] = None,
     policy_version: Optional[str] = None,
     policy_hash: Optional[str] = None,
+    planner_name: Optional[str] = None,
+    planner_metadata: Optional[Dict[str, object]] = None,
 ) -> SimulationResult:
     trajectory: List[State] = [initial_state]
     step_results: List[StepResult] = []
@@ -113,4 +117,6 @@ def simulate_plan(
         policy_id=policy_id,
         policy_version=policy_version,
         policy_hash=policy_hash,
+        planner_name=planner_name,
+        planner_metadata=planner_metadata,
     )

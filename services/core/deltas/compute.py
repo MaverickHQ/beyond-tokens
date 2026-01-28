@@ -5,7 +5,11 @@ from typing import Dict
 from services.core.state import State
 
 
-def compute_state_delta(prior: State, next_state: State, prices: Dict[str, float]) -> Dict[str, object]:
+def compute_state_delta(
+    prior: State,
+    next_state: State,
+    prices: Dict[str, float],
+) -> Dict[str, object]:
     prior_equity = prior.equity(prices)
     next_equity = next_state.equity(prices)
 

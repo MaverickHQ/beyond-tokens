@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.0.0 — Provider-neutral Planner
+- Planner interface with deterministic mock planner
+- Planner proposals always verified by the world model
+- Planner metadata persisted alongside runs and artifacts
+
 ## v1.1.1 — Explainability, State Deltas, Policy Versioning
 - Deterministic explanation strings for accepted and rejected steps
 - Deltas artifact for step-by-step state changes

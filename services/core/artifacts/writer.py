@@ -60,6 +60,10 @@ class ArtifactWriter:
                 for step in result.steps
                 if step.errors
             ],
+            "planner": {
+                "planner_name": result.planner_name,
+                "planner_metadata": result.planner_metadata,
+            },
             "policy": {
                 "policy_id": result.policy_id,
                 "policy_version": result.policy_version,

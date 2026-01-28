@@ -88,6 +88,10 @@ def _serialize_simulation(result: SimulationResult) -> Dict[str, object]:
         "run_id": result.run_id,
         "approved": result.approved,
         "rejected_step_index": result.rejected_step_index,
+        "planner": {
+            "planner_name": result.planner_name,
+            "planner_metadata": result.planner_metadata,
+        },
         "policy": {
             "policy_id": result.policy_id,
             "policy_version": result.policy_version,
@@ -154,6 +158,7 @@ def _deserialize_simulation(data: dict) -> SimulationResult:
     ]
 
     policy = data.get("policy", {})
+    planner = data.get("planner", {})
 
     return SimulationResult(
         run_id=data["run_id"],
@@ -164,6 +169,8 @@ def _deserialize_simulation(data: dict) -> SimulationResult:
         policy_id=policy.get("policy_id"),
         policy_version=policy.get("policy_version"),
         policy_hash=policy.get("policy_hash"),
+        planner_name=planner.get("planner_name"),
+        planner_metadata=planner.get("planner_metadata"),
     )
 
 

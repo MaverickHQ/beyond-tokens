@@ -123,6 +123,37 @@ def main() -> None:
         )
     )
 
+    print("\nPlanner demo (mock planner, expected rejection)")
+    planner_response = invoke_lambda(
+        simulate_fn,
+        {
+            "plan": [
+                {"type": "PlaceBuy", "symbol": "AAPL", "quantity": 1},
+                {"type": "PlaceBuy", "symbol": "AAPL", "quantity": 20},
+            ],
+            "state_id": "demo_planner_a",
+            "policy_id": "demo_policy_planner",
+            "planner": {
+                "planner_name": "mock",
+                "planner_metadata": {"goal": "reject"},
+            },
+        },
+    )
+    if "run_id" in planner_response:
+        explanation = _get_step_explanation(planner_response, outputs)
+        print(
+            json.dumps(
+                {
+                    "run_id": planner_response["run_id"],
+                    "approved": planner_response["approved"],
+                    "rejected_step_index": planner_response["rejected_step_index"],
+                    "artifact_s3_prefix": planner_response.get("artifact_s3_prefix"),
+                    "explanation": explanation,
+                },
+                indent=2,
+            )
+        )
+
 
 if __name__ == "__main__":
     main()

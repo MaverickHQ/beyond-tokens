@@ -22,8 +22,9 @@ def explain_transition(
         exposure_delta = next_state.exposure - prior_state.exposure
         return (
             "Accepted: cash "
-            f"{_format_currency(prior_state.cash_balance)} → {_format_currency(next_state.cash_balance)} "
-            f"({cash_delta:+.2f}), exposure {prior_state.exposure:.2f} → {next_state.exposure:.2f} "
+            f"{_format_currency(prior_state.cash_balance)} → "
+            f"{_format_currency(next_state.cash_balance)} ({cash_delta:+.2f}), "
+            f"exposure {prior_state.exposure:.2f} → {next_state.exposure:.2f} "
             f"({exposure_delta:+.2f})."
         )
 

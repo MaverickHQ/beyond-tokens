@@ -18,6 +18,9 @@ test: test-unit test-integration
 demo-local:
 	python3 scripts/demo_local.py
 
+demo-local-planner:
+	python3 scripts/demo_local_planner.py
+
 cdk-install:
 	npm --prefix infra/cdk install
 

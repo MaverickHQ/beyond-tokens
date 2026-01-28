@@ -55,6 +55,21 @@ def test_aws_demo_scenarios():
     execution = _invoke_lambda(execute_fn, {"run_id": approve_response["run_id"]})
     assert execution["executed"] is True
 
+    planner_response = _invoke_lambda(
+        simulate_fn,
+        {
+            "plan": [
+                {"type": "PlaceBuy", "symbol": "AAPL", "quantity": 1},
+                {"type": "PlaceBuy", "symbol": "AAPL", "quantity": 20},
+            ],
+            "state_id": "planner_scenario",
+            "policy_id": "planner_policy",
+            "planner": {"planner_name": "mock", "planner_metadata": {"goal": "reject"}},
+        },
+    )
+    assert planner_response["approved"] is False
+    assert _load_decision_planner_name(outputs, planner_response["run_id"]) == "mock"
+
 
 def _s3_client():
     return boto3.client("s3")
@@ -81,3 +96,12 @@ def _load_decision_policy_hash(outputs: dict, run_id: str) -> str:
     payload = json.loads(response["Body"].read().decode("utf-8"))
     policy = payload.get("policy", {})
     return policy.get("policy_hash", "")
+
+
+def _load_decision_planner_name(outputs: dict, run_id: str) -> str:
+    bucket = _get_bucket(outputs)
+    key = f"artifacts/{run_id}/decision.json"
+    response = _s3_client().get_object(Bucket=bucket, Key=key)
+    payload = json.loads(response["Body"].read().decode("utf-8"))
+    planner = payload.get("planner", {})
+    return planner.get("planner_name", "")
