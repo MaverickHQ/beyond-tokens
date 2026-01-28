@@ -11,6 +11,7 @@ This repository accompanies the **Beyond Tokens** essay series. The essays expla
 
 ## Architecture (Executable World Model)
 A minimal world-model pipeline that shares the same core semantics locally and in the cloud.
+https://harveygill.substack.com/p/beyond-tokens
 
 ## Sequence (Plan → Simulate → Verify → Execute)
 ```mermaid
