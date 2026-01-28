@@ -1,0 +1,27 @@
+stages:
+  - id: v1
+    name: Minimum Viable World Model
+    description: >
+      Deterministic state, transitions, and verification enabling
+      safe simulation and plan evaluation without learning.
+  - id: v1.1
+    name: Executable World Model (AWS)
+    description: >
+      Cloud-deployed execution of the world model with persistence,
+      artifacts, and idempotent simulation and execution.
+  - id: v2
+    name: Agent-Governed World Models (Planned)
+    description: >
+      Learned dynamics and LLM-based proposers operating inside
+      verified world-model constraints.
+
+scope:
+  v1:
+    - Deterministic simulation, verification, and policy enforcement.
+    - Learning and agentic proposal generation are out of scope.
+  v1.1:
+    - Cloud execution with persistence and artifacts.
+    - Learning and agents remain out of scope.
+  v2:
+    - Agent-governed proposals and learned dynamics.
+    - VL-JEPA-style learning belongs in this stage after execution exists.

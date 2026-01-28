@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+.env/
+.env
+*.log
+tmp/
+
+# Pytest
+.pytest_cache/
+
+# Ruff
+.ruff_cache/
+
+# Node
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# CDK
+cdk.out/
+infra/cdk/cdk-outputs.json
+
+# OS
+.DS_Store
