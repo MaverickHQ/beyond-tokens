@@ -5,7 +5,6 @@ from services.core.market import MarketPath
 from services.core.simulator import simulate_plan
 from services.core.state import RiskLimits, State
 
-
 FIXTURE_PATH = Path("examples/fixtures/trading_path.json")
 
 

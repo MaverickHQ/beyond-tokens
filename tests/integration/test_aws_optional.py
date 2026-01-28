@@ -1,12 +1,11 @@
-from pathlib import Path
 import json
 import os
+from pathlib import Path
 
 import boto3
 import pytest
 
 from services.aws.utils.output_loader import load_outputs
-
 
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_AWS_TESTS") != "1",
