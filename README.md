@@ -14,6 +14,7 @@ https://harveygill.substack.com/p/beyond-tokens
 ## Architecture (Executable World Model)
 A minimal world-model pipeline that shares the same core semantics locally and in the cloud.
 
+Artifacts now include `decision.json`, `trajectory.json`, and `deltas.json` for each run.
 
 ## Sequence (Plan → Simulate → Verify → Execute)
 ```mermaid
@@ -87,6 +88,7 @@ AWS_PROFILE=beyond-tokens-dev make demo-aws
 ## What you should see
 - Scenario A rejects with clear verification errors.
 - Scenario B approves and executes with updated state.
+- Each scenario prints a short explanation line derived from deterministic verification.
 
 ## One-command checks
 ```bash

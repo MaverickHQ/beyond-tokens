@@ -9,6 +9,7 @@ from services.aws.adapters.ddb_stores import DdbPolicyStore, DdbRunStore, DdbSta
 from services.aws.adapters.s3_writer import S3ArtifactWriter
 from services.core.actions import PlaceBuy, PlaceSell
 from services.core.market import MarketPath
+from services.core.policy.versioning import ensure_policy_metadata
 from services.core.simulator import simulate_plan
 from services.core.state import RiskLimits, State
 
@@ -85,15 +86,20 @@ def handler(event, context):
             ),
         )
 
+    policy = policy_store.get_policy(policy_id)
+    if policy:
+        policy = ensure_policy_metadata(policy)
     if initial_state is None:
-        policy = policy_store.get_policy(policy_id) or {
-            "policy_id": policy_id,
-            "risk_limits": {
-                "max_leverage": 2.0,
-                "max_position_pct": 0.8,
-                "max_position_value": 5_000.0,
-            },
-        }
+        policy = policy or ensure_policy_metadata(
+            {
+                "policy_id": policy_id,
+                "risk_limits": {
+                    "max_leverage": 2.0,
+                    "max_position_pct": 0.8,
+                    "max_position_value": 5_000.0,
+                },
+            }
+        )
         limits = policy["risk_limits"]
         initial_state = State(
             cash_balance=1_000.0,
@@ -107,7 +113,26 @@ def handler(event, context):
         )
         state_store.init_state(initial_state)
 
-    result = simulate_plan(initial_state, actions, fixture)
+    if policy is None:
+        policy = ensure_policy_metadata(
+            {
+                "policy_id": policy_id,
+                "risk_limits": {
+                    "max_leverage": 2.0,
+                    "max_position_pct": 0.8,
+                    "max_position_value": 5_000.0,
+                },
+            }
+        )
+
+    result = simulate_plan(
+        initial_state,
+        actions,
+        fixture,
+        policy_id=policy.get("policy_id"),
+        policy_version=policy.get("policy_version"),
+        policy_hash=policy.get("policy_hash"),
+    )
     run_store.save_run(result)
     artifacts = artifact_writer.write(result)
 

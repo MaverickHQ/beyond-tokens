@@ -20,6 +20,7 @@ class S3ArtifactWriter:
         prefix = f"artifacts/{result.run_id}"
         trajectory_key = f"{prefix}/trajectory.json"
         decision_key = f"{prefix}/decision.json"
+        deltas_key = f"{prefix}/deltas.json"
 
         trajectory_payload = {
             "run_id": result.run_id,
@@ -39,6 +40,8 @@ class S3ArtifactWriter:
                         {"code": error.code, "message": error.message}
                         for error in step.errors
                     ],
+                    "explanation": step.explanation,
+                    "state_delta": step.state_delta,
                 }
                 for step in result.steps
             ],
@@ -59,6 +62,16 @@ class S3ArtifactWriter:
                 for step in result.steps
                 if step.errors
             ],
+            "policy": {
+                "policy_id": result.policy_id,
+                "policy_version": result.policy_version,
+                "policy_hash": result.policy_hash,
+            },
+        }
+
+        deltas_payload = {
+            "run_id": result.run_id,
+            "deltas": [step.state_delta for step in result.steps],
         }
 
         self._client.put_object(
@@ -71,9 +84,15 @@ class S3ArtifactWriter:
             Key=decision_key,
             Body=json.dumps(decision_payload, indent=2).encode("utf-8"),
         )
+        self._client.put_object(
+            Bucket=self.bucket_name,
+            Key=deltas_key,
+            Body=json.dumps(deltas_payload, indent=2).encode("utf-8"),
+        )
 
         return {
             "artifact_prefix": prefix,
             "trajectory_key": trajectory_key,
             "decision_key": decision_key,
+            "deltas_key": deltas_key,
         }

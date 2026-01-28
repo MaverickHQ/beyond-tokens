@@ -1,10 +1,13 @@
 from pathlib import Path
 
+import json
+
 from services.core.actions import PlaceBuy
 from services.core.artifacts import ArtifactWriter
 from services.core.execution import execute_run
 from services.core.market import MarketPath
 from services.core.persistence import PolicyStore, RunStore, StateStore
+from services.core.policy.versioning import ensure_policy_metadata
 from services.core.simulator import simulate_plan
 from services.core.state import RiskLimits, State
 
@@ -15,7 +18,7 @@ def test_reject_scenario_writes_artifacts(tmp_path: Path):
     policy_store = PolicyStore(tmp_path / "policies.json")
     artifact_writer = ArtifactWriter(tmp_path / "artifacts")
 
-    policy_store.save_policy({"policy_id": "default"})
+    policy_store.save_policy(ensure_policy_metadata({"policy_id": "default"}))
     initial_state = State(
         cash_balance=1_000.0,
         positions={},
@@ -30,7 +33,15 @@ def test_reject_scenario_writes_artifacts(tmp_path: Path):
         PlaceBuy("AAPL", 20, 0.0),
     ]
 
-    result = simulate_plan(initial_state, actions, market_path)
+    policy = policy_store.get_policy("default")
+    result = simulate_plan(
+        initial_state,
+        actions,
+        market_path,
+        policy_id=policy["policy_id"],
+        policy_version=policy["policy_version"],
+        policy_hash=policy["policy_hash"],
+    )
     run_store.save_run(result)
     artifacts = artifact_writer.write(result)
 
@@ -38,6 +49,10 @@ def test_reject_scenario_writes_artifacts(tmp_path: Path):
     assert result.rejected_step_index == 1
     assert artifacts["trajectory"].exists()
     assert artifacts["decision"].exists()
+    assert artifacts["deltas"].exists()
+
+    decision_payload = json.loads(artifacts["decision"].read_text())
+    assert decision_payload["policy"]["policy_hash"]
 
 
 def test_approve_scenario_execution_idempotent(tmp_path: Path):
@@ -46,7 +61,7 @@ def test_approve_scenario_execution_idempotent(tmp_path: Path):
     policy_store = PolicyStore(tmp_path / "policies.json")
     artifact_writer = ArtifactWriter(tmp_path / "artifacts")
 
-    policy_store.save_policy({"policy_id": "default"})
+    policy_store.save_policy(ensure_policy_metadata({"policy_id": "default"}))
     initial_state = State(
         cash_balance=1_000.0,
         positions={},
@@ -61,7 +76,15 @@ def test_approve_scenario_execution_idempotent(tmp_path: Path):
         PlaceBuy("MSFT", 1, 0.0),
     ]
 
-    result = simulate_plan(initial_state, actions, market_path)
+    policy = policy_store.get_policy("default")
+    result = simulate_plan(
+        initial_state,
+        actions,
+        market_path,
+        policy_id=policy["policy_id"],
+        policy_version=policy["policy_version"],
+        policy_hash=policy["policy_hash"],
+    )
     run_store.save_run(result)
     artifact_writer.write(result)
 

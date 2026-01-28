@@ -27,6 +27,28 @@ def invoke_lambda(function_name: str, payload: dict) -> dict:
     return json.loads(response["Payload"].read().decode("utf-8"))
 
 
+def _get_step_explanation(simulation_response: dict, outputs: dict) -> str:
+    run_id = simulation_response.get("run_id")
+    if not run_id:
+        return ""
+
+    bucket_name = outputs.get("ArtifactsBucketName")
+    if not bucket_name:
+        return ""
+
+    s3 = boto3.client("s3")
+    key = f"artifacts/{run_id}/trajectory.json"
+    obj = s3.get_object(Bucket=bucket_name, Key=key)
+    payload = json.loads(obj["Body"].read().decode("utf-8"))
+    steps = payload.get("steps", [])
+    if not steps:
+        return ""
+    rejected_step = simulation_response.get("rejected_step_index")
+    if rejected_step is None:
+        return steps[-1].get("explanation", "")
+    return steps[rejected_step].get("explanation", "")
+
+
 def main() -> None:
     outputs = load_outputs(OUTPUTS_PATH)
 
@@ -46,6 +68,7 @@ def main() -> None:
         print("Simulate response did not include run_id. Raw response:")
         print(json.dumps(reject_response, indent=2))
         return
+    explanation = _get_step_explanation(reject_response, outputs)
     print(
         json.dumps(
             {
@@ -54,6 +77,7 @@ def main() -> None:
                 "rejected_step_index": reject_response["rejected_step_index"],
                 "errors_summary": reject_response.get("errors_summary", []),
                 "artifact_s3_prefix": reject_response.get("artifact_s3_prefix"),
+                "explanation": explanation,
             },
             indent=2,
         )
@@ -72,6 +96,7 @@ def main() -> None:
         print("Simulate response did not include run_id. Raw response:")
         print(json.dumps(approve_response, indent=2))
         return
+    explanation = _get_step_explanation(approve_response, outputs)
     print(
         json.dumps(
             {
@@ -79,6 +104,7 @@ def main() -> None:
                 "approved": approve_response["approved"],
                 "rejected_step_index": approve_response["rejected_step_index"],
                 "artifact_s3_prefix": approve_response.get("artifact_s3_prefix"),
+                "explanation": explanation,
             },
             indent=2,
         )

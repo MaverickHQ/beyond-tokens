@@ -18,6 +18,7 @@ class ArtifactWriter:
 
         trajectory_path = run_dir / "trajectory.json"
         decision_path = run_dir / "decision.json"
+        deltas_path = run_dir / "deltas.json"
 
         trajectory_payload = {
             "run_id": result.run_id,
@@ -37,6 +38,8 @@ class ArtifactWriter:
                         {"code": error.code, "message": error.message}
                         for error in step.errors
                     ],
+                    "explanation": step.explanation,
+                    "state_delta": step.state_delta,
                 }
                 for step in result.steps
             ],
@@ -47,16 +50,34 @@ class ArtifactWriter:
             "approved": result.approved,
             "rejected_step_index": result.rejected_step_index,
             "errors": [
-                {"step_index": step.step_index, "errors": [
-                    {"code": error.code, "message": error.message}
-                    for error in step.errors
-                ]}
+                {
+                    "step_index": step.step_index,
+                    "errors": [
+                        {"code": error.code, "message": error.message}
+                        for error in step.errors
+                    ],
+                }
                 for step in result.steps
                 if step.errors
             ],
+            "policy": {
+                "policy_id": result.policy_id,
+                "policy_version": result.policy_version,
+                "policy_hash": result.policy_hash,
+            },
+        }
+
+        deltas_payload = {
+            "run_id": result.run_id,
+            "deltas": [step.state_delta for step in result.steps],
         }
 
         trajectory_path.write_text(json.dumps(trajectory_payload, indent=2))
         decision_path.write_text(json.dumps(decision_payload, indent=2))
+        deltas_path.write_text(json.dumps(deltas_payload, indent=2))
 
-        return {"trajectory": trajectory_path, "decision": decision_path}
+        return {
+            "trajectory": trajectory_path,
+            "decision": decision_path,
+            "deltas": deltas_path,
+        }

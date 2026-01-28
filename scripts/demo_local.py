@@ -13,6 +13,7 @@ from services.core.artifacts import ArtifactWriter
 from services.core.execution import execute_run
 from services.core.market import MarketPath
 from services.core.persistence import PolicyStore, RunStore, StateStore
+from services.core.policy.versioning import ensure_policy_metadata
 from services.core.simulator import simulate_plan
 from services.core.state import RiskLimits, State
 
@@ -45,10 +46,16 @@ def main() -> None:
     policy_store = PolicyStore(POLICIES_PATH)
     artifact_writer = ArtifactWriter(ARTIFACT_DIR)
 
-    policy = {
-        "policy_id": "default",
-        "risk_limits": {"max_leverage": 2.0, "max_position_pct": 0.8, "max_position_value": 5_000.0},
-    }
+    policy = ensure_policy_metadata(
+        {
+            "policy_id": "default",
+            "risk_limits": {
+                "max_leverage": 2.0,
+                "max_position_pct": 0.8,
+                "max_position_value": 5_000.0,
+            },
+        }
+    )
     policy_store.save_policy(policy)
 
     initial_state = State(
@@ -68,12 +75,21 @@ def main() -> None:
         ("scenario_approve.json", "Scenario B (expected approval)"),
     ]:
         plan = load_plan(SCENARIO_DIR / scenario_name)
-        result = simulate_plan(initial_state, plan, market_path)
+        result = simulate_plan(
+            initial_state,
+            plan,
+            market_path,
+            policy_id=policy["policy_id"],
+            policy_version=policy["policy_version"],
+            policy_hash=policy["policy_hash"],
+        )
         run_store.save_run(result)
         artifacts = artifact_writer.write(result)
 
         decision = "approved" if result.approved else "rejected"
+        explanation = result.steps[-1].explanation if result.steps else ""
         print(f"\n{label} -> {decision} run_id={result.run_id}")
+        print(f"Explanation: {explanation}")
         if not result.approved:
             rejected_step = result.rejected_step_index
             error_codes = [error.code for error in result.steps[rejected_step].errors]
@@ -81,7 +97,12 @@ def main() -> None:
         else:
             print(f"Approved with {len(result.trajectory)} states")
 
-        print(f"Artifacts: trajectory={artifacts['trajectory']} decision={artifacts['decision']}")
+        print(
+            "Artifacts: "
+            f"trajectory={artifacts['trajectory']} "
+            f"decision={artifacts['decision']} "
+            f"deltas={artifacts['deltas']}"
+        )
 
     approved_run_id = [
         run_id

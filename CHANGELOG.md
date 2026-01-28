@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.1 — Explainability, State Deltas, Policy Versioning
+- Deterministic explanation strings for accepted and rejected steps
+- Deltas artifact for step-by-step state changes
+- Policy hash/version embedded in decisions and run metadata
+
 ## v1.1.0 — Executable World Model on AWS
 - Deployed Minimum Viable World Model using AWS Lambda, DynamoDB, and S3
 - Idempotent simulation and execution handlers

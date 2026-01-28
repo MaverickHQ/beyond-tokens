@@ -88,6 +88,11 @@ def _serialize_simulation(result: SimulationResult) -> Dict[str, object]:
         "run_id": result.run_id,
         "approved": result.approved,
         "rejected_step_index": result.rejected_step_index,
+        "policy": {
+            "policy_id": result.policy_id,
+            "policy_version": result.policy_version,
+            "policy_hash": result.policy_hash,
+        },
         "trajectory": [state.to_dict() for state in result.trajectory],
         "steps": [
             {
@@ -104,6 +109,8 @@ def _serialize_simulation(result: SimulationResult) -> Dict[str, object]:
                     for error in step.errors
                 ],
                 "price_context": step.price_context,
+                "explanation": step.explanation,
+                "state_delta": step.state_delta,
             }
             for step in result.steps
         ],
@@ -140,9 +147,13 @@ def _deserialize_simulation(data: dict) -> SimulationResult:
                 for error in step["errors"]
             ],
             price_context=step["price_context"],
+            explanation=step.get("explanation", ""),
+            state_delta=step.get("state_delta", {}),
         )
         for step in data["steps"]
     ]
+
+    policy = data.get("policy", {})
 
     return SimulationResult(
         run_id=data["run_id"],
@@ -150,6 +161,9 @@ def _deserialize_simulation(data: dict) -> SimulationResult:
         steps=steps,
         approved=data["approved"],
         rejected_step_index=data.get("rejected_step_index"),
+        policy_id=policy.get("policy_id"),
+        policy_version=policy.get("policy_version"),
+        policy_hash=policy.get("policy_hash"),
     )
 
 
