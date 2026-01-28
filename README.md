@@ -4,6 +4,8 @@ Beyond Tokens — Builder Lab is a deployable world-model planning lab with a st
 
 This repository accompanies the **Beyond Tokens** essay series. The essays explain *why*; this repo demonstrates *how*.
 
+https://harveygill.substack.com/p/beyond-tokens
+
 ## Staged Versions
 - **v1.0 Minimum Viable World Model (local)**
 - **v1.1 Executable World Model on AWS**
@@ -11,7 +13,7 @@ This repository accompanies the **Beyond Tokens** essay series. The essays expla
 
 ## Architecture (Executable World Model)
 A minimal world-model pipeline that shares the same core semantics locally and in the cloud.
-https://harveygill.substack.com/p/beyond-tokens
+
 
 ## Sequence (Plan → Simulate → Verify → Execute)
 ```mermaid
