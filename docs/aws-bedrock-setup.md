@@ -60,6 +60,8 @@ export ENABLE_BEDROCK_PLANNER=1
 make demo-local-bedrock
 ```
 
+Expected: Scenario A rejects with fixture-priced actions and Scenario B approves with fixture prices. Explanations and artifact paths print in each scenario.
+
 ## Troubleshooting
 - **AccessDenied**: ensure the caller has `bedrock:InvokeModel` permission.
 - **ResourceNotFound/ValidationException**: confirm region `us-east-1` and model ID from the catalog.

@@ -7,7 +7,7 @@ REGION="${AWS_REGION:-us-east-1}"
 echo "Checking AWS CLI access for profile: $PROFILE"
 aws sts get-caller-identity --profile "$PROFILE" >/tmp/bedrock_sts.json
 
-echo "Listing Bedrock models in $REGION"
+echo "Listing Bedrock models in $REGION (default us-east-1)"
 aws bedrock list-foundation-models --profile "$PROFILE" --region "$REGION" >/tmp/bedrock_models.json
 
 MODEL_ID=$(python3 - <<'PY'

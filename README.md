@@ -93,10 +93,18 @@ The Bedrock planner proposes a plan only; verification remains authoritative.
 It cannot bypass simulator/verifier checks.
 
 ```bash
-ENABLE_BEDROCK_PLANNER=1 AWS_REGION=us-east-1 BEDROCK_MODEL_ID=<model-id> make demo-local-bedrock
+ENABLE_BEDROCK_PLANNER=1 AWS_REGION=us-east-1 \
+BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0 \
+make demo-local-bedrock
 ```
 
-Do not commit environment files; use local shell exports or an `.env` ignored by git.
+**What you should see**
+- Scenario A prints two actions using fixture prices and is rejected.
+- Scenario B prints two actions using fixture prices and is approved.
+- Each scenario prints a non-empty explanation line.
+- Artifact paths are printed.
+
+Do not commit environment files; export variables in your shell and keep `.env` files out of git (covered by `.gitignore`).
 
 ## AWS Demo
 

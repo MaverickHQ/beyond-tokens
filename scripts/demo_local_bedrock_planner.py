@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -65,6 +66,17 @@ def _explain(simulation) -> str:
     return simulation.steps[-1].explanation
 
 
+def _planner_metadata(metadata: dict | None) -> str:
+    if not metadata:
+        return "{}"
+    safe_metadata = {
+        key: value
+        for key, value in metadata.items()
+        if key not in {"request_id", "account_id", "arn"}
+    }
+    return json.dumps(safe_metadata, sort_keys=True)
+
+
 def main() -> None:
     if not _ensure_enabled():
         return
@@ -122,6 +134,7 @@ def main() -> None:
 
         print(f"\n{label}")
         print(f"Planner={planner_result.planner_name} goal={goal}")
+        print(f"Planner metadata: {_planner_metadata(planner_result.metadata)}")
         print("Plan:")
         for index, action in enumerate(planner_result.plan):
             print(f"  {_format_action(index, action, market_path)}")
