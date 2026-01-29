@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.2.0 — AWS Planner Execution
+- AWS simulate handler supports planner mode for mock/optional Bedrock.
+- New AWS planner demo and smoke scripts + Makefile targets.
+- Planner metadata persisted and validated in AWS integration tests.
+- CDK wiring for gated Bedrock invoke permissions.
+
 ## v2.0.0 — Provider-neutral Planner
 - Planner interface with deterministic mock planner
 - Planner proposals always verified by the world model

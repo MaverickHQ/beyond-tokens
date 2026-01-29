@@ -9,6 +9,7 @@ from services.aws.adapters.ddb_stores import DdbPolicyStore, DdbRunStore, DdbSta
 from services.aws.adapters.s3_writer import S3ArtifactWriter
 from services.core.actions import PlaceBuy, PlaceSell
 from services.core.market import MarketPath
+from services.core.planner import BedrockPlanner, MockPlanner
 from services.core.policy.versioning import ensure_policy_metadata
 from services.core.simulator import simulate_plan
 from services.core.state import RiskLimits, State
@@ -43,6 +44,16 @@ def _actions_from_payload(actions_payload: List[Dict[str, Any]]):
     return actions
 
 
+def _planner_error(code: str, message: str) -> Dict[str, object]:
+    return {
+        "planner_error": {"code": code, "message": message},
+        "approved": False,
+        "rejected_step_index": None,
+        "errors_summary": [],
+        "artifact_s3_prefix": None,
+    }
+
+
 def handler(event, context):
     payload = event if isinstance(event, dict) else json.loads(event)
 
@@ -61,18 +72,6 @@ def handler(event, context):
     fixture = _load_fixture()
 
     planner_payload = payload.get("planner", {}) if isinstance(payload, dict) else {}
-
-    if "scenario" in payload:
-        scenario_path = (
-            Path(__file__).resolve().parents[1]
-            / "assets"
-            / "scenarios"
-            / payload["scenario"]
-        )
-        scenario_payload = json.loads(scenario_path.read_text())
-        actions = _actions_from_payload(scenario_payload["plan"])
-    else:
-        actions = _actions_from_payload(payload.get("plan", []))
 
     initial_state = state_store.get_current_state()
     if payload.get("initial_state"):
@@ -127,6 +126,59 @@ def handler(event, context):
             }
         )
 
+    mode = payload.get("mode", "direct")
+    planner_name = planner_payload.get("planner_name") or planner_payload.get("name")
+    planner_metadata = planner_payload.get("planner_metadata")
+
+    if mode == "planner":
+        planner_name = planner_payload.get("name", "mock")
+        goal = planner_payload.get("goal", "approve")
+        note = planner_payload.get("note", "")
+
+        if planner_name == "mock":
+            planner = MockPlanner()
+        elif planner_name == "bedrock":
+            if os.environ.get("ENABLE_BEDROCK_PLANNER") != "1":
+                return _planner_error(
+                    "planner_disabled",
+                    "Bedrock planner is disabled. Set ENABLE_BEDROCK_PLANNER=1.",
+                )
+            model_id = os.environ.get("BEDROCK_MODEL_ID", "")
+            if not model_id:
+                return _planner_error(
+                    "planner_config_missing",
+                    "BEDROCK_MODEL_ID is not set.",
+                )
+            region = os.environ.get("AWS_REGION", "us-east-1")
+            planner = BedrockPlanner(model_id=model_id, region_name=region)
+        else:
+            return _planner_error("planner_unknown", f"Unknown planner: {planner_name}")
+
+        planner_result = planner.propose(initial_state.to_dict(), policy, goal)
+        if planner_result.error:
+            return _planner_error(planner_result.error.code, planner_result.error.message)
+        if note:
+            planner_result.metadata["note"] = note
+        planner_name = planner_result.planner_name
+        planner_metadata = planner_result.metadata
+        actions = planner_result.plan
+    else:
+        if "scenario" in payload:
+            scenario_path = (
+                Path(__file__).resolve().parents[1]
+                / "assets"
+                / "scenarios"
+                / payload["scenario"]
+            )
+            scenario_payload = json.loads(scenario_path.read_text())
+            actions = _actions_from_payload(scenario_payload["plan"])
+        else:
+            actions = _actions_from_payload(payload.get("plan", []))
+        if planner_metadata is None and planner_payload:
+            planner_metadata = {
+                key: value for key, value in planner_payload.items() if key != "name"
+            }
+
     result = simulate_plan(
         initial_state,
         actions,
@@ -134,8 +186,8 @@ def handler(event, context):
         policy_id=policy.get("policy_id"),
         policy_version=policy.get("policy_version"),
         policy_hash=policy.get("policy_hash"),
-        planner_name=planner_payload.get("planner_name"),
-        planner_metadata=planner_payload.get("planner_metadata"),
+        planner_name=planner_name,
+        planner_metadata=planner_metadata,
     )
     run_store.save_run(result)
     artifacts = artifact_writer.write(result)

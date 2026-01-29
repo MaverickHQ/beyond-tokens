@@ -114,6 +114,20 @@ AWS_PROFILE=beyond-tokens-dev make cdk-deploy
 AWS_PROFILE=beyond-tokens-dev make demo-aws
 ```
 
+## AWS Planner Demo (v2.2)
+
+```bash
+AWS_PROFILE=beyond-tokens-dev make cdk-deploy
+AWS_PROFILE=beyond-tokens-dev make demo-aws-planner
+AWS_PROFILE=beyond-tokens-dev make smoke-aws-planner
+```
+
+**What you should see**
+- Scenario A prints two fixture-priced actions and is rejected.
+- Scenario B prints two fixture-priced actions and is approved.
+- Each scenario prints a non-empty explanation line.
+- Artifact prefixes are printed (no AWS identifiers).
+
 ## What you should see
 - Scenario A rejects with clear verification errors.
 - Scenario B approves and executes with updated state.

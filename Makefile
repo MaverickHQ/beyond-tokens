@@ -1,4 +1,4 @@
-.PHONY: setup lint test-unit test-integration test cdk-synth verify verify-aws
+.PHONY: setup lint test-unit test-integration test cdk-synth verify verify-aws demo-aws-planner smoke-aws-planner
 
 setup:
 	python3 -m pip install pydantic boto3 pytest ruff
@@ -39,6 +39,12 @@ smoke-aws:
 demo-aws:
 	python3 scripts/demo_aws.py
 
+demo-aws-planner:
+	python3 scripts/demo_aws_planner.py
+
+smoke-aws-planner:
+	python3 scripts/smoke_aws_planner.py
+
 verify: lint test demo-local
 
 verify-aws:
@@ -50,3 +56,5 @@ verify-aws:
 	$(MAKE) cdk-deploy
 	$(MAKE) smoke-aws
 	$(MAKE) demo-aws
+	$(MAKE) smoke-aws-planner
+	$(MAKE) demo-aws-planner

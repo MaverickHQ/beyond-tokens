@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
@@ -43,6 +44,8 @@ export class BeyondTokensStack extends cdk.Stack {
       RUNS_TABLE: runsTable.tableName,
       POLICIES_TABLE: policiesTable.tableName,
       FIXTURE_NAME: "trading_path.json",
+      ENABLE_BEDROCK_PLANNER: this.node.tryGetContext("enableBedrockPlanner") ? "1" : "0",
+      BEDROCK_MODEL_ID: this.node.tryGetContext("bedrockModelId") ?? "",
     };
 
     const lambdaPath = path.join(__dirname, "..", "..", "..");
@@ -96,6 +99,15 @@ export class BeyondTokensStack extends cdk.Stack {
     runsTable.grantReadWriteData(executeFn);
 
     policiesTable.grantReadWriteData(simulateFn);
+
+    if (this.node.tryGetContext("enableBedrockPlanner")) {
+      simulateFn.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["bedrock:InvokeModel"],
+          resources: ["*"],
+        }),
+      );
+    }
 
     new cdk.CfnOutput(this, "ArtifactsBucketName", {
       value: artifactsBucket.bucketName,
