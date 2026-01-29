@@ -87,6 +87,17 @@ make demo-local
 make demo-local-planner
 ```
 
+## Optional: Bedrock Planner (v2.1)
+
+The Bedrock planner proposes a plan only; verification remains authoritative.
+It cannot bypass simulator/verifier checks.
+
+```bash
+ENABLE_BEDROCK_PLANNER=1 AWS_REGION=us-east-1 BEDROCK_MODEL_ID=<model-id> make demo-local-bedrock
+```
+
+Do not commit environment files; use local shell exports or an `.env` ignored by git.
+
 ## AWS Demo
 
 ```bash
