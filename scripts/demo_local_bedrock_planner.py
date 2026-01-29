@@ -47,11 +47,22 @@ def _format_action(index: int, action: object, market_path: MarketPath) -> str:
     symbol = getattr(action, "symbol", None)
     side = "BUY" if action.__class__.__name__ == "PlaceBuy" else "SELL"
     qty = getattr(action, "quantity", "?")
-    price_context = market_path.price_context(index - 1)
+    price_context = market_path.price_context(index)
     price = price_context.get(symbol) if price_context else None
     if price is None:
         price = getattr(action, "price", 0.0)
-    return f"{index}) {side} {qty} {symbol} @ {price}"
+    return f"{index + 1}) {side} {qty} {symbol} @ {price}"
+
+
+def _explain(simulation) -> str:
+    if not simulation.steps:
+        return ""
+    if simulation.approved:
+        return simulation.steps[-1].explanation
+    rejected_index = simulation.rejected_step_index
+    if rejected_index is not None and rejected_index < len(simulation.steps):
+        return simulation.steps[rejected_index].explanation
+    return simulation.steps[-1].explanation
 
 
 def main() -> None:
@@ -112,11 +123,11 @@ def main() -> None:
         print(f"\n{label}")
         print(f"Planner={planner_result.planner_name} goal={goal}")
         print("Plan:")
-        for index, action in enumerate(planner_result.plan, start=1):
+        for index, action in enumerate(planner_result.plan):
             print(f"  {_format_action(index, action, market_path)}")
 
         decision = "approved" if simulation.approved else "rejected"
-        explanation = simulation.steps[-1].explanation if simulation.steps else ""
+        explanation = _explain(simulation)
         print(f"Decision: {decision} run_id={simulation.run_id}")
         print(f"Explanation: {explanation}")
         if planner_result.rejection:

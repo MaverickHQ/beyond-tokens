@@ -5,6 +5,7 @@ from services.core.planner import MockPlanner, run_planned_simulation
 from services.core.policy.versioning import ensure_policy_metadata
 from services.core.state import RiskLimits, State
 
+
 def _base_state():
     return State(
         cash_balance=1_000.0,

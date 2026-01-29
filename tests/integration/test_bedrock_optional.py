@@ -1,9 +1,6 @@
 import os
-from pathlib import Path
-
 import pytest
 
-from services.core.market import MarketPath
 from services.core.planner import BedrockPlanner
 from services.core.policy.versioning import ensure_policy_metadata
 from services.core.state import RiskLimits, State
@@ -27,8 +24,6 @@ def test_bedrock_planner_integration():
         exposure=0.0,
         risk_limits=RiskLimits(2.0, 0.8, 5_000.0),
     )
-    market_path = MarketPath.from_fixture(Path("examples/fixtures/trading_path.json"))
-
     planner = BedrockPlanner(
         model_id=os.environ["BEDROCK_MODEL_ID"],
         region_name=os.environ["AWS_REGION"],
