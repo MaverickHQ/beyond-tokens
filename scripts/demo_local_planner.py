@@ -56,7 +56,24 @@ def main() -> None:
 
     print("Planner demo: initialized policy and state")
 
-    for goal, label in [("reject", "Planner Scenario A (expected rejection)"), ("approve", "Planner Scenario B (expected approval)")]:
+    def format_action(index: int, action: object) -> str:
+        if hasattr(action, "symbol"):
+            side = "BUY" if action.__class__.__name__ == "PlaceBuy" else "SELL"
+            qty = getattr(action, "quantity", "?")
+            price = getattr(action, "price", "?")
+            return f"{index}) {side} {qty} {action.symbol} @ {price}"
+        if isinstance(action, dict):
+            side = "BUY" if action.get("type") == "PlaceBuy" else "SELL"
+            qty = action.get("quantity", "?")
+            symbol = action.get("symbol", "?")
+            price = action.get("price", "?")
+            return f"{index}) {side} {qty} {symbol} @ {price}"
+        return f"{index}) {action}"
+
+    for goal, label in [
+        ("reject", "Planner Scenario A (expected rejection)"),
+        ("approve", "Planner Scenario B (expected approval)"),
+    ]:
         planner_result, simulation = run_planned_simulation(
             planner=planner,
             initial_state=initial_state,
@@ -71,7 +88,9 @@ def main() -> None:
 
         print(f"\n{label}")
         print(f"Planner={planner_result.planner_name} goal={planner_result.metadata.get('goal')}")
-        print(f"Plan: {[action.__class__.__name__ + ':' + action.symbol for action in planner_result.plan]}")
+        print("Plan:")
+        for index, action in enumerate(planner_result.plan, start=1):
+            print(f"  {format_action(index, action)}")
 
         decision = "approved" if simulation.approved else "rejected"
         explanation = simulation.steps[-1].explanation if simulation.steps else ""
