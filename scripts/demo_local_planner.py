@@ -56,17 +56,29 @@ def main() -> None:
 
     print("Planner demo: initialized policy and state")
 
+    def _effective_price(step_index: int, symbol: str, action: object) -> float:
+        if symbol:
+            price_context = market_path.price_context(step_index)
+            if price_context:
+                price = price_context.get(symbol)
+                if price is not None:
+                    return price
+        if isinstance(action, dict):
+            return float(action.get("price", 0.0) or 0.0)
+        return float(getattr(action, "price", 0.0) or 0.0)
+
     def format_action(index: int, action: object) -> str:
-        if hasattr(action, "symbol"):
-            side = "BUY" if action.__class__.__name__ == "PlaceBuy" else "SELL"
-            qty = getattr(action, "quantity", "?")
-            price = getattr(action, "price", "?")
-            return f"{index}) {side} {qty} {action.symbol} @ {price}"
         if isinstance(action, dict):
             side = "BUY" if action.get("type") == "PlaceBuy" else "SELL"
             qty = action.get("quantity", "?")
             symbol = action.get("symbol", "?")
-            price = action.get("price", "?")
+            price = _effective_price(index - 1, symbol, action)
+            return f"{index}) {side} {qty} {symbol} @ {price}"
+        if hasattr(action, "symbol"):
+            side = "BUY" if action.__class__.__name__ == "PlaceBuy" else "SELL"
+            qty = getattr(action, "quantity", "?")
+            symbol = getattr(action, "symbol", "?")
+            price = _effective_price(index - 1, symbol, action)
             return f"{index}) {side} {qty} {symbol} @ {price}"
         return f"{index}) {action}"
 
