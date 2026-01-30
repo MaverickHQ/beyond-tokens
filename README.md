@@ -6,6 +6,24 @@ This repository accompanies the **Beyond Tokens** essay series. The essays expla
 
 https://harveygill.substack.com/p/beyond-tokens
 
+## Why this repository exists
+
+Most AI systems fail not because they are unintelligent, but because they are unaccountable.
+
+They generate fluent reasoning without being forced to confront consequences. Plans are proposed, but not tested. Actions are taken, but not verified. Failures appear only after execution, when rollback is expensive or impossible.
+
+This repository demonstrates a different approach.
+
+It implements a minimal but complete architecture in which:
+- state is explicit and inspectable
+- actions are simulated before execution
+- constraints are enforced at the level of state transitions
+- execution only occurs after verification passes
+
+The goal is not to build a trading system.
+
+The goal is to show — concretely — what it takes to turn world-model theory into executable, verifiable systems that behave correctly under planning pressure.
+
 ## Staged Versions
 - **v1.0 Minimum Viable World Model (local)**
 - **v1.1 Executable World Model on AWS**
@@ -56,6 +74,12 @@ sequenceDiagram
 AWS mapping: State/Run/Policy stores map to DynamoDB tables. Artifacts live in an S3 prefix, and entry points are Lambda handlers (simulate/execute/status).
 
 Planner insertion (proposes, never executes): Planner → simulate_plan → verify → artifacts → execute_run.
+
+## How this maps to the Beyond Tokens essay series
+
+The capstone essay, **Essay 5**, is the recommended entry point for builders: https://harveygill.substack.com/p/beyond-tokens. It presents the executable architecture and links directly to the companion repo: https://github.com/MaverickHQ/beyond-tokens.
+
+Essays 1–4 are the foundations that explain *why* this architecture exists: Essay 1 frames the accountability gap, Essay 2 defines world models and state, Essay 3 formalizes planning under constraints, and Essay 4 motivates verification before execution.
 
 ## Setup
 
@@ -139,3 +163,10 @@ make lint
 make test
 make demo-local
 ```
+
+## How to evaluate this repository in 10 minutes
+1. Plans are not executed directly.
+2. Every plan is simulated step-by-step against explicit state.
+3. Invalid plans are rejected before execution with reasons.
+4. Deterministic artifacts are produced (trajectory, deltas, policy version, explanation).
+5. Execution only occurs after verification passes.
