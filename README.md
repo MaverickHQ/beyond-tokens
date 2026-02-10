@@ -6,6 +6,15 @@ This repository accompanies the **Beyond Tokens** essay series. The essays expla
 
 https://harveygill.substack.com/p/beyond-tokens
 
+## Who is this for?
+
+This repo is for:
+- Architects exploring **world models + agentic systems**
+- Traders experimenting with **paper trading + planning agents**
+- Researchers interested in **VL-JEPA-style world models applied to markets**
+
+If you find this useful, feel free to ⭐ the repo or open an issue with feedback.
+
 ## Why this repository exists
 
 Most AI systems fail not because they are unintelligent, but because they are unaccountable.
