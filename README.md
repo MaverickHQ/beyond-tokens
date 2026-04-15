@@ -1,94 +1,74 @@
-# Beyond Tokens — Builder Lab
+# Beyond Tokens
 
-Beyond Tokens — Builder Lab is a deployable world-model planning lab with a strict **simulate → verify → commit** flow.
+### Executable world models on AWS — simulate → verify → enforce
 
-This repository accompanies the **Beyond Tokens** essay series. The essays explain *why*; this repo demonstrates *how*.
+This repository accompanies the **[Beyond Tokens](https://harveygill.substack.com/p/beyond-tokens)** essay series published on Substack. The essays explain *why* token-based systems fail under real constraints. This repo demonstrates *how* to build the alternative.
 
-https://harveygill.substack.com/p/beyond-tokens
+![Beyond Tokens — essay to code](./docs/beyond_tokens_readme.svg)
 
-## Who is this for?
+---
 
-This repo is for:
-- Architects exploring **world models + agentic systems**
-- Traders experimenting with **paper trading + planning agents**
-- Researchers interested in **VL-JEPA-style world models applied to markets**
+## What this repository demonstrates
 
-If you find this useful, feel free to ⭐ the repo or open an issue with feedback.
+Most AI systems fail not because they are unintelligent, but because they are unaccountable. They generate fluent reasoning without being forced to confront consequences. Plans are proposed but not tested. Actions are taken but not verified. Failures appear only after execution, when rollback is expensive or impossible.
 
-## Why this repository exists
+This repository demonstrates a different approach. It implements a minimal but complete architecture in which:
 
-Most AI systems fail not because they are unintelligent, but because they are unaccountable.
+- State is explicit and inspectable
+- Actions are simulated before execution
+- Constraints are enforced at the level of state transitions
+- Execution only occurs after verification passes
 
-They generate fluent reasoning without being forced to confront consequences. Plans are proposed, but not tested. Actions are taken, but not verified. Failures appear only after execution, when rollback is expensive or impossible.
+The goal is not to build a trading system. The goal is to show — concretely — what it takes to turn world-model theory into executable, verifiable systems that behave correctly under planning pressure.
 
-This repository demonstrates a different approach.
+---
 
-It implements a minimal but complete architecture in which:
-- state is explicit and inspectable
-- actions are simulated before execution
-- constraints are enforced at the level of state transitions
-- execution only occurs after verification passes
+## Architecture
 
-The goal is not to build a trading system.
+A strict **Plan → Simulate → Verify → Execute** loop. Plans are never executed directly. Every action is simulated against explicit world state, verified against constraints, and only committed if the resulting state is valid. Invalid plans are rejected before execution — no rollback required.
 
-The goal is to show — concretely — what it takes to turn world-model theory into executable, verifiable systems that behave correctly under planning pressure.
-
-## Staged Versions
-- **v1.0 Minimum Viable World Model (local)**
-- **v1.1 Executable World Model on AWS**
-- **v2 Agent-governed world models (planned)**
-
-## Architecture (Executable World Model)
-A minimal world-model pipeline that shares the same core semantics locally and in the cloud.
-
-Artifacts now include `decision.json`, `trajectory.json`, and `deltas.json` for each run.
-
-The planner is provider-neutral and untrusted: it only proposes a plan, while simulation and verification remain authoritative.
-
-## Sequence (Plan → Simulate → Verify → Execute)
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Store
-    participant Simulator
-    participant Verifier
-    participant Executor
-    participant Artifacts
-
-    Client->>Store: load current State (state_id)
-    Client->>Simulator: simulate_plan(actions)
-    loop each action
-        Simulator->>Verifier: verify_transition(state, action)
-        Verifier-->>Simulator: accept/reject
-    end
-    alt rejected
-        Simulator->>Store: persist run
-        Simulator->>Artifacts: write decision/trajectory
-        Simulator-->>Client: SimulationResult(approved=false)
-    else approved
-        Simulator->>Store: persist run
-        Simulator->>Artifacts: write decision/trajectory
-        Simulator-->>Client: SimulationResult(approved=true)
-    end
-
-    Client->>Executor: execute_run(run_id)
-    Executor->>Store: load run + load state
-    Executor->>Executor: enforce idempotency
-    Executor->>Store: persist final state when executed=true
-    Executor-->>Client: execution summary
-
-    Note over Client,Executor: Local and AWS deployments share the same core semantics.
+```
+Plan → Simulate → Verify → Execute
+           ↓
+       [invalid] → Reject (no execution, no rollback)
+           ↓
+       [valid]  → Execute once, idempotently, with auditable trail
 ```
 
-AWS mapping: State/Run/Policy stores map to DynamoDB tables. Artifacts live in an S3 prefix, and entry points are Lambda handlers (simulate/execute/status).
+The planner is provider-neutral and untrusted: it proposes a plan only. Simulation and verification remain authoritative and cannot be bypassed.
 
-Planner insertion (proposes, never executes): Planner → simulate_plan → verify → artifacts → execute_run.
+AWS mapping: State and Run stores map to DynamoDB tables. Artifacts are written to S3. Entry points are Lambda handlers exposed via API Gateway.
 
-## How this maps to the Beyond Tokens essay series
+---
 
-The capstone essay, **Essay 5**, is the recommended entry point for builders: https://harveygill.substack.com/p/beyond-tokens. It presents the executable architecture and links directly to the companion repo: https://github.com/MaverickHQ/beyond-tokens.
+## Releases
 
-Essays 1–4 are the foundations that explain *why* this architecture exists: Essay 1 frames the accountability gap, Essay 2 defines world models and state, Essay 3 formalizes planning under constraints, and Essay 4 motivates verification before execution.
+Each release maps directly to an essay in the Beyond Tokens series. The architecture compounds with each version — it does not pivot.
+
+| Release | What it adds | Essay |
+|---|---|---|
+| `v1.1` | Explicit state, constraint enforcement, local execution | [From World Models to Working Systems](https://harveygill.substack.com/p/from-world-models-to-working-systems) |
+| `v2.0` | Planner integration, upstream proposal mechanism | [Why Planning Breaks Token-Based Systems](https://harveygill.substack.com/p/why-planning-breaks-token-based-systems) |
+| `v2.1` | Provider-neutral planners, learned dynamics hook | [Learning the World — Why VL-JEPA 2 Matters](https://harveygill.substack.com/p/learning-the-world) |
+| `v2.2` | AWS deployment — same semantics in the cloud | [From World Models to Working Systems](https://harveygill.substack.com/p/from-world-models-to-working-systems) |
+
+---
+
+## Essays
+
+The series builds the argument that leads to this architecture. Each essay is self-contained but they form a single progression.
+
+| Essay | What it argues |
+|---|---|
+| [The Token Trap](https://harveygill.substack.com/p/beyond-next-token-prediction) | Why next-token prediction fails when reasoning must persist over time |
+| [Why World Models Change the Game](https://harveygill.substack.com/p/why-world-models-change-the-game) | Why predicting state rather than tokens changes what systems can do |
+| [Why Planning Breaks Token-Based Systems](https://harveygill.substack.com/p/why-planning-breaks-token-based-systems) | Planning as the stress test that exposes architectural limits |
+| [Learning the World — Why VL-JEPA 2 Matters](https://harveygill.substack.com/p/learning-the-world) | How world models can be learned from observation rather than hand-built |
+| [From World Models to Working Systems](https://harveygill.substack.com/p/from-world-models-to-working-systems) | How these ideas become executable, verifiable systems |
+
+**Recommended entry point for builders:** start with essay 5, then work backwards through the theory as needed.
+
+---
 
 ## Setup
 
@@ -108,22 +88,32 @@ make lint
 make test
 ```
 
-## Local Demo
+---
+
+## Local demo
 
 ```bash
 make demo-local
 ```
 
-## Local Demo (Planner)
+## Local demo — with planner
 
 ```bash
 make demo-local-planner
 ```
 
-## Optional: Bedrock Planner (v2.1)
+**What you should see**
 
-The Bedrock planner proposes a plan only; verification remains authoritative.
-It cannot bypass simulator/verifier checks.
+- Scenario A submits two actions and is rejected — constraints bind before execution
+- Scenario B submits two actions and is approved — state transitions are valid
+- Each scenario prints a non-empty explanation line derived from deterministic verification
+- Artifact paths are printed for `decision.json`, `trajectory.json`, and `deltas.json`
+
+---
+
+## Optional: Bedrock planner (v2.1)
+
+The Bedrock planner proposes a plan only. Verification remains authoritative and cannot be bypassed by the planner.
 
 ```bash
 ENABLE_BEDROCK_PLANNER=1 AWS_REGION=us-east-1 \
@@ -131,15 +121,9 @@ BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0 \
 make demo-local-bedrock
 ```
 
-**What you should see**
-- Scenario A prints two actions using fixture prices and is rejected.
-- Scenario B prints two actions using fixture prices and is approved.
-- Each scenario prints a non-empty explanation line.
-- Artifact paths are printed.
+---
 
-Do not commit environment files; export variables in your shell and keep `.env` files out of git (covered by `.gitignore`).
-
-## AWS Demo
+## AWS demo
 
 ```bash
 AWS_PROFILE=beyond-tokens-dev make cdk-synth
@@ -147,7 +131,7 @@ AWS_PROFILE=beyond-tokens-dev make cdk-deploy
 AWS_PROFILE=beyond-tokens-dev make demo-aws
 ```
 
-## AWS Planner Demo (v2.2)
+## AWS planner demo (v2.2)
 
 ```bash
 AWS_PROFILE=beyond-tokens-dev make cdk-deploy
@@ -156,26 +140,34 @@ AWS_PROFILE=beyond-tokens-dev make smoke-aws-planner
 ```
 
 **What you should see**
-- Scenario A prints two fixture-priced actions and is rejected.
-- Scenario B prints two fixture-priced actions and is approved.
-- Each scenario prints a non-empty explanation line.
-- Artifact prefixes are printed (no AWS identifiers).
 
-## What you should see
-- Scenario A rejects with clear verification errors.
-- Scenario B approves and executes with updated state.
-- Each scenario prints a short explanation line derived from deterministic verification.
+- Scenario A rejects with clear verification errors before any execution occurs
+- Scenario B approves and executes with updated state persisted to DynamoDB
+- Artifact prefixes are printed — no AWS identifiers in output
+- Correlation IDs flow from API response through logs and metrics
 
-## One-command checks
-```bash
-make lint
-make test
-make demo-local
-```
+Do not commit environment files. Export variables in your shell and keep `.env` files out of git (covered by `.gitignore`).
+
+---
 
 ## How to evaluate this repository in 10 minutes
-1. Plans are not executed directly.
-2. Every plan is simulated step-by-step against explicit state.
-3. Invalid plans are rejected before execution with reasons.
-4. Deterministic artifacts are produced (trajectory, deltas, policy version, explanation).
-5. Execution only occurs after verification passes.
+
+1. Plans are never executed directly
+2. Every plan is simulated step-by-step against explicit state
+3. Invalid plans are rejected before execution with a deterministic reason
+4. Artifacts are produced for every run — `decision.json`, `trajectory.json`, `deltas.json`
+5. Execution only occurs after verification passes — idempotently, with an auditable trail
+
+---
+
+## Repository structure
+
+```
+services/        Core world model, simulator, verifier, executor
+infra/cdk/       AWS infrastructure — API Gateway, Lambda, DynamoDB, S3
+examples/        Local and AWS demo scripts
+docs/            Architecture diagrams
+tests/           Unit and integration tests
+scripts/         Setup and utility scripts
+openspec/        API specification
+```
