@@ -4,7 +4,7 @@
 
 This repository accompanies the **[Beyond Tokens](https://harveygill.substack.com/p/beyond-tokens)** essay series published on Substack. The essays explain *why* token-based systems fail under real constraints. This repo demonstrates *how* to build the alternative.
 
-![Beyond Tokens — essay to code](./docs/beyond_tokens_readme.svg)
+![Beyond Tokens — essay to code](./docs/beyond_tokens_readme.png)
 
 ---
 
