@@ -2,7 +2,9 @@
 
 ### Executable world models on AWS — simulate → verify → enforce
 
-This repository accompanies the **[Beyond Tokens](https://harveygill.substack.com/p/beyond-tokens)** essay series published on Substack. The essays explain *why* token-based systems fail under real constraints. This repo demonstrates *how* to build the alternative.
+This repository accompanies the **[Beyond Tokens](https://harveygill.substack.com/p/beyond-tokens)** essay series published on Substack. It demonstrates a constrained LLM planning architecture: Claude (via AWS Bedrock) proposes action sequences, and a deterministic verifier enforces constraints — accepting or rejecting each plan. Claude cannot bypass verification. That constraint is the architectural point.
+
+The simulate → verify → execute loop is authoritative regardless of what the planner proposes.
 
 ![Beyond Tokens — essay to code](./docs/beyond_tokens_readme.png)
 
@@ -111,9 +113,9 @@ make demo-local-planner
 
 ---
 
-## Optional: Bedrock planner (v2.1)
+## Claude Bedrock Planner
 
-The Bedrock planner proposes a plan only. Verification remains authoritative and cannot be bypassed by the planner.
+The planner uses Claude (anthropic.claude-3-haiku via AWS Bedrock) to propose plans. Verification remains authoritative — Claude cannot bypass the simulate → verify → enforce constraints. This is the primary architecture demonstrated in this repository.
 
 ```bash
 ENABLE_BEDROCK_PLANNER=1 AWS_REGION=us-east-1 \
@@ -171,3 +173,7 @@ tests/           Unit and integration tests
 scripts/         Setup and utility scripts
 openspec/        API specification
 ```
+
+## Part of the Crucible project
+This repository is the first series in a connected body of work. The Crucible project extends this architecture with LLM agents, adversarial quality loops, and autonomous improvement.
+- [crucible-ewm](https://github.com/MaverickHQ/crucible-ewm) — observable trajectory infrastructure
