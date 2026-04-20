@@ -20,7 +20,6 @@ BASE_DIR = ROOT
 DATA_DIR = BASE_DIR / "tmp" / "demo_local_bedrock"
 FIXTURE_PATH = BASE_DIR / "examples" / "fixtures" / "trading_path.json"
 ARTIFACT_DIR = DATA_DIR / "artifacts"
-STATE_PATH = DATA_DIR / "state.json"
 RUNS_PATH = DATA_DIR / "runs.json"
 POLICIES_PATH = DATA_DIR / "policies.json"
 
@@ -66,24 +65,12 @@ def _explain(simulation) -> str:
     return simulation.steps[-1].explanation
 
 
-def _planner_metadata(metadata: dict | None) -> str:
-    if not metadata:
-        return "{}"
-    safe_metadata = {
-        key: value
-        for key, value in metadata.items()
-        if key not in {"request_id", "account_id", "arn"}
-    }
-    return json.dumps(safe_metadata, sort_keys=True)
-
-
 def main() -> None:
     if not _ensure_enabled():
         return
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    state_store = StateStore(STATE_PATH)
     run_store = RunStore(RUNS_PATH)
     policy_store = PolicyStore(POLICIES_PATH)
     artifact_writer = ArtifactWriter(ARTIFACT_DIR)
@@ -100,14 +87,6 @@ def main() -> None:
     )
     policy_store.save_policy(policy)
 
-    initial_state = State(
-        cash_balance=1_000.0,
-        positions={},
-        exposure=0.0,
-        risk_limits=RiskLimits(2.0, 0.8, 5_000.0),
-    )
-    state_store.init_state(initial_state)
-
     market_path = MarketPath.from_fixture(FIXTURE_PATH)
     planner = BedrockPlanner(
         model_id=os.environ["BEDROCK_MODEL_ID"],
@@ -116,46 +95,79 @@ def main() -> None:
 
     print("Bedrock planner demo: initialized policy and state")
 
-    for goal, label in [
-        ("reject", "Bedrock Planner Scenario A (expected rejection)"),
-        ("approve", "Bedrock Planner Scenario B (expected approval)"),
-    ]:
-        planner_result, simulation = run_planned_simulation(
-            planner=planner,
-            initial_state=initial_state,
-            market_path=market_path,
-            policy=policy,
-            goal=goal,
-            state_summary=initial_state.to_dict(),
-        )
+    # Scenario A — constrained state: $50 cash, any buy fails
+    state_a = State(
+        cash_balance=50.0,
+        positions={},
+        exposure=0.0,
+        risk_limits=RiskLimits(2.0, 0.8, 5_000.0),
+    )
+    state_summary_a = {
+        **state_a.to_dict(),
+        "current_prices": market_path.price_context(0),
+    }
+    planner_result_a, simulation_a = run_planned_simulation(
+        planner=planner,
+        initial_state=state_a,
+        market_path=market_path,
+        policy=policy,
+        goal=None,
+        state_summary=state_summary_a,
+    )
 
-        run_store.save_run(simulation)
-        artifacts = artifact_writer.write(simulation)
+    # Scenario B — available capital: $1,000 cash, plan should pass
+    state_b = State(
+        cash_balance=1_000.0,
+        positions={},
+        exposure=0.0,
+        risk_limits=RiskLimits(2.0, 0.8, 5_000.0),
+    )
+    state_summary_b = {
+        **state_b.to_dict(),
+        "current_prices": market_path.price_context(0),
+    }
+    planner_result_b, simulation_b = run_planned_simulation(
+        planner=planner,
+        initial_state=state_b,
+        market_path=market_path,
+        policy=policy,
+        goal=None,
+        state_summary=state_summary_b,
+    )
 
-        print(f"\n{label}")
-        print(f"Planner={planner_result.planner_name} goal={goal}")
-        print(f"Planner metadata: {_planner_metadata(planner_result.metadata)}")
-        print("Plan:")
-        for index, action in enumerate(planner_result.plan):
-            print(f"  {_format_action(index, action, market_path)}")
+    print("\nScenario A — constrained state ($50 cash)")
+    print(f"Planner: {planner_result_a.planner_name}")
+    reasoning_a = (planner_result_a.metadata or {}).get(
+        "planner_metadata", {}
+    ).get("reasoning", "no reasoning returned")
+    print(f"Claude's reasoning: {reasoning_a}")
+    print("Plan proposed:")
+    for index, action in enumerate(planner_result_a.plan):
+        print(f"  {_format_action(index, action, market_path)}")
+    decision_a = "approved" if simulation_a.approved else "rejected"
+    print(f"Verifier decision: {decision_a}")
+    print(f"Explanation: {_explain(simulation_a)}")
+    run_store.save_run(simulation_a)
+    artifacts_a = artifact_writer.write(simulation_a)
+    print(f"Artifacts: trajectory={artifacts_a['trajectory']} "
+          f"decision={artifacts_a['decision']}")
 
-        decision = "approved" if simulation.approved else "rejected"
-        explanation = _explain(simulation)
-        print(f"Decision: {decision} run_id={simulation.run_id}")
-        print(f"Explanation: {explanation}")
-        if planner_result.rejection:
-            print(
-                "Planner rejection: "
-                f"step={planner_result.rejection.rejected_step_index} "
-                f"violations={planner_result.rejection.violations}"
-            )
-
-        print(
-            "Artifacts: "
-            f"trajectory={artifacts['trajectory']} "
-            f"decision={artifacts['decision']} "
-            f"deltas={artifacts['deltas']}"
-        )
+    print("\nScenario B — available capital ($1,000 cash)")
+    print(f"Planner: {planner_result_b.planner_name}")
+    reasoning_b = (planner_result_b.metadata or {}).get(
+        "planner_metadata", {}
+    ).get("reasoning", "no reasoning returned")
+    print(f"Claude's reasoning: {reasoning_b}")
+    print("Plan proposed:")
+    for index, action in enumerate(planner_result_b.plan):
+        print(f"  {_format_action(index, action, market_path)}")
+    decision_b = "approved" if simulation_b.approved else "rejected"
+    print(f"Verifier decision: {decision_b}")
+    print(f"Explanation: {_explain(simulation_b)}")
+    run_store.save_run(simulation_b)
+    artifacts_b = artifact_writer.write(simulation_b)
+    print(f"Artifacts: trajectory={artifacts_b['trajectory']} "
+          f"decision={artifacts_b['decision']}")
 
 
 if __name__ == "__main__":

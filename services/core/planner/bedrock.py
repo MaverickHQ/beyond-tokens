@@ -62,58 +62,105 @@ class BedrockPlanner(Planner):
         self,
         state_summary: Dict[str, object],
         policy: Dict[str, object],
-        goal: str,
+        goal: str = None,
     ) -> PlannerResult:
+
+        cash = state_summary.get("cash_balance", 0.0)
+        positions = state_summary.get("positions", {})
+        risk_limits = state_summary.get("risk_limits", {})
+        prices = state_summary.get("current_prices", {})
+
+        max_leverage = risk_limits.get("max_leverage", 2.0)
+        max_position_pct = risk_limits.get("max_position_pct", 0.8)
+        max_position_value = risk_limits.get("max_position_value", 5000.0)
+
+        equity = cash
+        max_single_position = equity * max_position_pct
+
+        positions_text = (
+            ", ".join(f"{sym}: {qty}" for sym, qty in positions.items())
+            if positions else "none"
+        )
+        prices_text = (
+            ", ".join(f"{sym}: ${price:.2f}" for sym, price in prices.items())
+            if prices else "no prices available"
+        )
+
         prompt = (
-            "Return JSON only. No markdown. Schema: "
-            "{'actions':[{'type':'PlaceBuy'|'PlaceSell','symbol':str,'quantity':number,'price':number}],"
-            "'planner_metadata':{'goal':'approve|reject','note':str}}. "
-            "Do not output an empty actions list. If unsure, follow the templates exactly. "
-            f"Goal={goal}. Fixture prices: step0 AAPL=100.0, step1 AAPL=101.0, step1 MSFT=198.0. "
-            "For goal=reject return exactly 2 actions: "
-            "1) PlaceBuy AAPL quantity=1 price=100.0, "
-            "2) PlaceBuy AAPL quantity=20 price=101.0. "
-            "For goal=approve return exactly 2 actions: "
-            "1) PlaceBuy AAPL quantity=1 price=100.0, "
-            "2) PlaceBuy MSFT quantity=1 price=198.0."
+            "You are a trading planner. Propose a plan of 1 to 3 actions "
+            "given the current world state below. Only propose actions that "
+            "satisfy ALL constraints listed.\n\n"
+            f"Cash available: ${cash:.2f}\n"
+            f"Current positions: {positions_text}\n"
+            f"Current prices: {prices_text}\n\n"
+            "Constraints — ALL must be satisfied:\n"
+            f"1. Each PlaceBuy costs quantity x price, deducted from cash. "
+            f"Total cost must not exceed ${cash:.2f}.\n"
+            f"2. Cannot sell a symbol you do not hold.\n"
+            f"3. Max position value per symbol: ${max_position_value:.2f} "
+            f"(quantity x price must be below this).\n"
+            f"4. Max position concentration: {max_position_pct * 100:.0f}% of equity. "
+            f"Equity = ${equity:.2f}, so max single position value = "
+            f"${max_single_position:.2f}. "
+            f"Do not propose a position whose value exceeds ${max_single_position:.2f}.\n"
+            f"5. Max leverage: {max_leverage}x total exposure vs equity.\n\n"
+            "Important: the concentration limit is strict. If equity is $1000 "
+            "and max_position_pct is 0.8, then buying $800 or more of any single "
+            "symbol will be rejected. Keep each position below "
+            f"${max_single_position:.2f}.\n\n"
+            "Return JSON only. No markdown. No explanation outside JSON.\n"
+            "Schema: {\"actions\": [{\"type\": \"PlaceBuy\" or \"PlaceSell\", "
+            "\"symbol\": string, \"quantity\": number, \"price\": number}], "
+            "\"planner_metadata\": {\"reasoning\": string}}\n"
+            "The reasoning field must explain why you chose these specific "
+            "quantities given the constraints."
         )
 
         try:
             import boto3
-
-            client = boto3.client("bedrock-runtime", region_name=self._region_name)
+            client = boto3.client(
+                "bedrock-runtime", region_name=self._region_name
+            )
             response = client.invoke_model(
                 modelId=self._model_id,
                 contentType="application/json",
                 accept="application/json",
-                body=json.dumps(
-                    {
-                        "anthropic_version": "bedrock-2023-05-31",
-                        "temperature": 0.0,
-                        "max_tokens": 512,
-                        "messages": [{"role": "user", "content": prompt}],
-                    }
-                ),
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "temperature": 0.0,
+                    "max_tokens": 512,
+                    "messages": [{"role": "user", "content": prompt}],
+                }),
             )
             raw_body = response.get("body")
-            body_bytes = raw_body.read() if hasattr(raw_body, "read") else raw_body
+            body_bytes = (
+                raw_body.read() if hasattr(raw_body, "read") else raw_body
+            )
             payload = json.loads(body_bytes.decode("utf-8"))
             if isinstance(payload, dict) and "content" in payload:
                 content = payload.get("content")
                 if isinstance(content, list):
                     text = "".join(
-                        item.get("text", "") for item in content if isinstance(item, dict)
+                        item.get("text", "")
+                        for item in content
+                        if isinstance(item, dict)
                     )
                     payload = json.loads(text)
-            elif isinstance(payload, dict) and isinstance(payload.get("completion"), str):
+            elif isinstance(payload, dict) and isinstance(
+                payload.get("completion"), str
+            ):
                 payload = json.loads(payload["completion"])
 
             parsed = parse_bedrock_plan(payload)
             actions = [_action_from_payload(item) for item in parsed.actions]
             if not actions:
                 raise ValueError("Bedrock returned an empty plan.")
+
         except Exception as exc:
-            error_code = "empty_plan" if "empty plan" in str(exc).lower() else "bedrock_error"
+            error_code = (
+                "empty_plan" if "empty plan" in str(exc).lower()
+                else "bedrock_error"
+            )
             return PlannerResult(
                 plan=[],
                 planner_name=self.name,
@@ -121,14 +168,13 @@ class BedrockPlanner(Planner):
                 error=PlannerError(code=error_code, message=str(exc)),
             )
 
-        metadata = {
-            "model_id": self._model_id,
-            "region": self._region_name,
-        }
+        metadata = {"model_id": self._model_id, "region": self._region_name}
         request_id = response.get("ResponseMetadata", {}).get("RequestId")
         if request_id:
             metadata["request_id"] = request_id
         if parsed.planner_metadata:
             metadata["planner_metadata"] = parsed.planner_metadata
 
-        return PlannerResult(plan=actions, planner_name=self.name, metadata=metadata)
+        return PlannerResult(
+            plan=actions, planner_name=self.name, metadata=metadata
+        )
