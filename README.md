@@ -92,7 +92,7 @@ make test
 
 ---
 
-## Local demo
+## Local demo (no credentials required)
 
 ```bash
 make demo-local
@@ -113,7 +113,7 @@ make demo-local-planner
 
 ---
 
-## Claude Bedrock Planner
+## Claude Bedrock Planner (AWS credentials required)
 
 The planner uses Claude (anthropic.claude-3-haiku via AWS Bedrock) to propose plans. Verification remains authoritative — Claude cannot bypass the simulate → verify → enforce constraints. This is the primary architecture demonstrated in this repository.
 
